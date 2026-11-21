@@ -9,7 +9,7 @@ jobs:
   render:
     if: github.event_name == 'issues' && github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, '[Faceless Render]')
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,21 +18,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install system tools
+      - name: Install renderer dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg libnss3 libatk-bridge2.0-0 libgbm1 libasound2t64 fonts-dejavu-core
           wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O /tmp/chrome.deb
           sudo apt-get install -y /tmp/chrome.deb
-          python -m pip install --upgrade numpy scipy
-      - name: Render animated style example with prompt title
+      - name: Generate NEW animation with Gemini and render MP4
         env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-2.5-flash
           SOFTWARE_GL: '1'
         run: python studio/render_job.py
-      - name: Upload finished MP4
+      - name: Upload rendered video
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: faceless-video-${{ github.event.issue.number }}
+          name: faceless-ai-video-${{ github.event.issue.number }}
           path: output/
           retention-days: 7

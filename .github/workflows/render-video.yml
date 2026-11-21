@@ -27,7 +27,7 @@ jobs:
       - name: Generate NEW animation with Gemini and render MP4
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: gemini-2.5-flash
+          GEMINI_MODEL: gemini-3.8-flash
           SOFTWARE_GL: '1'
         run: python studio/render_job.py
       - name: Upload rendered video

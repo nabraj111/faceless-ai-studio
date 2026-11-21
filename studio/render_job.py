@@ -38,15 +38,19 @@ def run(args, cwd=None):
     print('RUN', ' '.join(map(str,args)), flush=True)
     subprocess.run(list(map(str,args)),cwd=cwd,check=True)
 run(['bash',skill/'scripts/new_video.sh',style,project.name,'--dir',project.parent])
-run(['python3',skill/'scripts/estimate.py',project])
-run(['node','tools/capture.mjs','check'],cwd=project)
-run(['node','tools/capture.mjs','cues'],cwd=project)
-run(['python3','tools/mix.py','.'],cwd=project)
-# Existing examples vary in duration; use their measured duration for a valid segment.
-lines = json.loads((project/'data/lines.json').read_text())
-source_length = float(lines['duration'])
-clip_seconds = max(1,min(seconds,int(source_length)-1))
-run(['node','tools/capture.mjs','video','renders/scene.mp4','0',str(clip_seconds),'--draft'],cwd=project)
+# Fast smoke test: render only the requested opening seconds of the existing
+# animated style example. Do not scan the entire 58s example, generate cues,
+# or mix full-length audio. This first test is intentionally silent.
+# 10 FPS significantly reduces CPU-bound Chrome frame captures on Actions.
+source_script = project/'script.json'
+if not source_script.is_file():
+    raise FileNotFoundError('Example script.json was not copied')
+print(f'FAST TEST: style={style}, duration={seconds}s, FPS=10 (silent)', flush=True)
+clip_seconds = seconds
+capture_env = dict(os.environ, FPS='10')
+print('RUN capture', flush=True)
+subprocess.run(['node','tools/capture.mjs','video','renders/scene.mp4','0',str(clip_seconds),'--draft'],
+               cwd=project, env=capture_env, check=True, timeout=1200)
 # Add the user's actual prompt as a title, while preserving the existing animation.
 # Text is passed as a file, never interpolated into a shell command/filter.
 textfile = project/'overlay.txt'
@@ -64,5 +68,6 @@ run(['ffmpeg','-y','-stream_loop','-1','-i','renders/scene.mp4','-t',str(seconds
     '-c:a','aac','-b:a','96k','-movflags','+faststart',str(video)],cwd=project)
 (output/'README.txt').write_text(f'Style: {style}\nPrompt/title: {prompt}\nDuration: {seconds}s\n'
    'This is an actual moving video rendered from the Skill\'s included example animation.\n'
+   'Fast test: silent, 10 FPS; no new animated scenes have been generated from the prompt.\n'
    'The prompt is displayed as a title; the existing example animation was not rewritten to match it.\n')
 print('OUTPUT:',video)
